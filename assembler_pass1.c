@@ -1,8 +1,3 @@
-/*
-	AUTHOR: Nandan Desai
-	DATE: 13th December 2017
-*/
-
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
@@ -37,8 +32,16 @@ typedef struct symbol_table symbol_table;
 struct intermediate_instruction{
 	int address;
 	instruction ins;
+	char* objCode;
 };
 typedef struct intermediate_instruction intermediate_instruction;
+
+/*OPTAB is a data structure which will be used to validate the read opcodes from the source file*/
+struct opcode_table{
+	char* mnemonic;
+	char* OPCODE;
+};
+typedef struct opcode_table opcode_table;
 
 /*
 #
@@ -59,6 +62,8 @@ symbol_table* SYMTAB;
 int numberOfInstructions; 
 /*Error flag*/
 int errorFlag=0;
+/*this is the opcode_table*/
+opcode_table* OPTAB;
 
 /*
 #
@@ -146,12 +151,13 @@ instruction* getAllInstructions(char sourceFilename[]){
 void writeIntermediateInstructions(int lineNumber,int addr,instruction ins){
 	intermediateInstructions[lineNumber].address=addr;
 	intermediateInstructions[lineNumber].ins=ins;
+	intermediateInstructions[lineNumber].objCode=NULL;
 	FILE *f_inter=fopen("intermediate_file.txt","a+");
 	fprintf(f_inter,"%X\t%s\t%s\t%s\n",intermediateInstructions[lineNumber].address,ins.LABEL,ins.OPCODE,ins.OPERAND);
 	fclose(f_inter);
 }
 
-/*This function searches for duplicate labels. If duplicates found, then returns 1, else returns the index of the empty field to insert next (LABEL,LOCCTR)*/
+/*This function searches for duplicate labels. If duplicates found, then returns -1, else returns the index of the empty field to insert next (LABEL,LOCCTR)*/
 int searchSYMTAB(int lineNumber,char* label){
 	int i=0;
 	for(i=0;i<numberOfInstructions;i++){
@@ -159,7 +165,7 @@ int searchSYMTAB(int lineNumber,char* label){
 			break;
 		}
 		else if(strcmp(SYMTAB[i].LABEL,label)==0){
-			/*if found, then set errorFlag to 1*/			
+			/*if found, then set errorFlag to -1*/			
 			errorFlag=-1;
 			return errorFlag;
 		}
@@ -175,6 +181,10 @@ void writeSYMTAB(){
 		SYMTABindex++;
 	}
 	fclose(f_symtab);
+}
+
+void readOPTAB(){
+
 }
 
 void assembler_pass1(){
@@ -221,7 +231,7 @@ void assembler_pass1(){
 			/*If error flag is set, then display error for duplicate labels*/
 			if(SYMTABindex==-1){
 				/*lineNumber started from 0. Hence lineNumber+1 is the appropriate lineNumber*/
-				printf("\nERROR: Duplicate symbol %s found at line number %d\n",instructions[lineNumber].LABEL,lineNumber+1);	
+				printf("\nERROR: Duplicate symbol '%s' found at line number %d\n",instructions[lineNumber].LABEL,lineNumber+1);	
 			}
 			else{
 				/*insert (LABEL,LOCCTR) into SYMTAB*/
