@@ -2,6 +2,7 @@
 #include<string.h>
 #include<stdlib.h>
 #define MAX_INSTRUCTIONS 100	
+#define MAX_OPCODES 60
 /*
  * For assembler pass 1, an intermediate file is generated along with SYMTAB (symbol table)
 */
@@ -62,9 +63,10 @@ symbol_table* SYMTAB;
 int numberOfInstructions; 
 /*Error flag*/
 int errorFlag=0;
-/*this is the opcode_table*/
+/*this is the opcode table*/
 opcode_table* OPTAB;
-
+/* total number of opcodes used in OPCODE.txt (this is actually used to create the malloc(opcode))*/
+int numberOfOpcodes;
 /*
 #
 #
@@ -174,7 +176,7 @@ int searchSYMTAB(int lineNumber,char* label){
 }
 
 void writeSYMTAB(){
-	FILE *f_symtab=fopen("SYMTAB.txt","w");
+	FILE *f_symtab=fopen("symtab.txt","w");
 	int SYMTABindex=0;
 	while(SYMTAB[SYMTABindex].LABEL!=NULL){
 		fprintf(f_symtab,"%s\t|\t%X\n",SYMTAB[SYMTABindex].LABEL,SYMTAB[SYMTABindex].address);
@@ -184,7 +186,12 @@ void writeSYMTAB(){
 }
 
 void readOPTAB(){
-
+	FILE *f_optab=fopen("OPCODE.txt","r");
+	char* line=(char*)malloc(16);	//read upto 16 characters
+	OPTAB=(opcode_table*)malloc(MAX_OPCODE*sizeof(opcode_table)); 
+	while(fgets(line,16,f_optab){
+		while()
+	}
 }
 
 void assembler_pass1(){
