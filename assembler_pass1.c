@@ -146,6 +146,7 @@ instruction* getAllInstructions(char sourceFilename[]){
 	ins[index].OPCODE=NULL;
 	ins[index].OPERAND=NULL;
 	numberOfInstructions=index-1;
+	free(line);
 	return ins;
 }
 
@@ -183,14 +184,39 @@ void writeSYMTAB(){
 		SYMTABindex++;
 	}
 	fclose(f_symtab);
+	printf("SYMTAB is written to symtab.txt file.\n");
 }
 
 void readOPTAB(){
+	printf("\n\n[[ OPTAB ]]\n");
+	printf("-----------------\n");
+	printf("Mnemonic | Opcode\n");
+	printf("-----------------\n");
+	const char delim[]=" \t\n";
+	int numOfTokensRead;
 	FILE *f_optab=fopen("OPCODE.txt","r");
 	char* line=(char*)malloc(16);	//read upto 16 characters
-	OPTAB=(opcode_table*)malloc(MAX_OPCODE*sizeof(opcode_table)); 
-	while(fgets(line,16,f_optab){
-		while()
+	char* token;
+	OPTAB=(opcode_table*)malloc(MAX_OPCODES*sizeof(opcode_table));
+	numberOfOpcodes=0;
+	while(fgets(line,16,f_optab)){
+		numOfTokensRead=0;
+		token=strtok(line,delim);
+		
+		while(token!=NULL){
+			numOfTokensRead++;
+			if(numOfTokensRead==1){
+				OPTAB[numberOfOpcodes].mnemonic=strdup(token);
+				
+			}
+			else if(numOfTokensRead==2){
+				OPTAB[numberOfOpcodes].OPCODE=strdup(token);
+			}
+			token=strtok(NULL,delim);
+		}
+		printf("  %s        %s\n",OPTAB[numberOfOpcodes].mnemonic,OPTAB[numberOfOpcodes].OPCODE);
+		numberOfOpcodes++;
+		
 	}
 }
 
@@ -248,11 +274,13 @@ void assembler_pass1(){
 		}
 		/*
 			CONTINUE FROM HERE..... REMOVE UNNECESSARY LINES BELOW THIS COMMENT
+			ALSO CHECK OUT FOR MEMORY LEAKS
 		*/
 		lineNumber++;
 		
 	}
 	writeSYMTAB();
+	readOPTAB();
 }
 
 void clearIntermediateFile(){
