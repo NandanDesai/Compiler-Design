@@ -3,3 +3,4 @@ source_assembly.txt
 symtab.txt
 test
 compiling_notes.txt
+-Wall
