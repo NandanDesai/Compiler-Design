@@ -1,79 +1,10 @@
+#include "assembler_pass1_header.h"
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
-#define MAX_INSTRUCTIONS 100	
-#define MAX_OPCODES 60
-/*
- * For assembler pass 1, an intermediate file is generated along with SYMTAB (symbol table)
-*/
-
-/*
-#
-#
-#	PREPARE THE REQUIRED DATASTRUCTURES FOR ASSEMBLER PASS 1
-#
-#
-*/
-/*An instruction contains LABEL, OPCODE and OPERAND*/
-struct instruction{
-	char* LABEL;
-	char* OPCODE;
-	char* OPERAND;
-};
-typedef struct instruction instruction;
-
-/*SYMTAB is a data structure which will be used to store the symbols (labels) and their addresses (in hex)*/
-struct symbol_table{
-	char* LABEL;
-	int address;
-};
-typedef struct symbol_table symbol_table;
-
-/* This structure is used to store and write (to a file) intermediate instructions containing addresses */
-struct intermediate_instruction{
-	int address;
-	instruction ins;
-	char* objCode;
-};
-typedef struct intermediate_instruction intermediate_instruction;
-
-/*OPTAB is a data structure which will be used to validate the read opcodes from the source file*/
-struct opcode_table{
-	char* mnemonic;
-	char* OPCODE;
-};
-typedef struct opcode_table opcode_table;
-
-/*
-#
-#
-#	PREPARE THE REQUIRED PARAMETERS AND VARIABLES FOR ASSEMBLER PASS 1
-#
-#
-*/
-/*location counter*/
-int LOCCTR; 
- /*the starting address is by default equal to zero*/
 int STARTADR=0;
-/*this contains the intermediate instructions to be written into the intermediate file*/
-intermediate_instruction* intermediateInstructions;	
-/*this is the symbol table*/
-symbol_table* SYMTAB;	
-/* total number of instructions (lines) present in the given assembly source file will be stored in this variable */
-int numberOfInstructions; 
-/*Error flag*/
 int errorFlag=0;
-/*this is the opcode table*/
-opcode_table* OPTAB;
-/* total number of opcodes used in OPCODE.txt (this is actually used to create the malloc(opcode))*/
-int numberOfOpcodes;
-/*
-#
-#
-#	DEFINE THE REQUIRED UTILITY FUNCTIONS FOR ASSEMBLER PASS 1
-#
-#
-*/
+
 instruction readInstruction(char* line){
 	const char delim[]=" \t\n";
 	instruction readIns;
@@ -161,30 +92,32 @@ void writeIntermediateInstructions(int lineNumber,int addr,instruction ins){
 }
 
 /*This function searches for duplicate labels. If duplicates found, then returns -1, else returns the index of the empty field to insert next (LABEL,LOCCTR)*/
-int searchSYMTAB(int lineNumber,char* label){
-	int i=0;
-	for(i=0;i<numberOfInstructions;i++){
-		if(SYMTAB[i].LABEL==NULL){
-			break;
-		}
-		else if(strcmp(SYMTAB[i].LABEL,label)==0){
-			/*if found, then set errorFlag to -1*/			
-			errorFlag=-1;
+int searchSYMTAB(char* label,int symtabIndex){
+	int i;
+	for(i=0;i<symtabIndex;i++){
+		if(strcmp(SYMTAB[i].LABEL,label)==0){
+			/*if found, then set errorFlag to 1*/			
+			errorFlag=1;
 			return errorFlag;
 		}
 	}
-	return i;
+	return 0;
 }
 
 void writeSYMTAB(){
 	FILE *f_symtab=fopen("symtab.txt","w");
 	int SYMTABindex=0;
+	printf("\n\n[[ SYMTAB ]]\n");
+	printf("-----------------\n");
+	printf("Label | Address (in Hex)\n");
+	printf("-----------------\n");
 	while(SYMTAB[SYMTABindex].LABEL!=NULL){
+		printf("%s\t|\t%X\n",SYMTAB[SYMTABindex].LABEL,SYMTAB[SYMTABindex].address);
 		fprintf(f_symtab,"%s\t|\t%X\n",SYMTAB[SYMTABindex].LABEL,SYMTAB[SYMTABindex].address);
 		SYMTABindex++;
 	}
 	fclose(f_symtab);
-	printf("SYMTAB is written to symtab.txt file.\n");
+	printf("\nSYMTAB is written to symtab.txt\n");
 }
 
 /*This function reads the Opcodes and their mnemonics from the text file which is given by the user.
@@ -234,6 +167,15 @@ int searchOPTAB(char* opcode){
 	return 0;
 }
 
+int lengthOfConstantInBytes(char* constant){
+	if(constant[0]=='X' || constant[0]=='x'){
+		return ((strlen(constant)-3)*4)/8;
+	}else if(constant[0]=='C' || constant[0]=='c'){
+		return (strlen(constant)-3);
+	}
+	return 0;
+}
+
 void assembler_pass1(){
 	/*read the source file and get the instructions*/
 	instruction* instructions=getAllInstructions("source_assembly.txt"); 
@@ -244,7 +186,8 @@ void assembler_pass1(){
 	/*keep track of the line number. Let the first line be zero*/
 	int lineNumber=0; 
 	/*SYMTABindex will hold the value of index of the empty field where the new (LABEL,LOCCTR)  will be inserted*/
-	int SYMTABindex;
+	int SYMTABindex=0;
+	/*Read the Opcode table*/
 	readOPTAB();
 	/*
 		#PASS 1 algorithm starts from here
@@ -253,7 +196,7 @@ void assembler_pass1(){
 	if(strcmp(instructions[lineNumber].OPCODE,"START")==0){
 		/* save #[operand] as starting address. The address given in the source file is by default taken as Hex and is converted to decimal. */ 
 		sscanf(instructions[lineNumber].OPERAND,"%X",&STARTADR);	
-		printf("STARTADR=%d <-(Decimal) %X <-(Hex)\n",STARTADR,STARTADR);
+		printf("\n\nSTARTADR=%d <-(Decimal) %X <-(Hex)\n",STARTADR,STARTADR);
 		/*initialize LOCCTR to starting address*/
 		LOCCTR=STARTADR;
 		/*write line to intermediate file*/	
@@ -268,52 +211,59 @@ void assembler_pass1(){
 		/*read next input line*/
 		lineNumber++;
 	}
-	
+	/*This variable will hold the address of the instruction currently being read
+	  We already have LOCCTR, but why do we require another variable to hold address?
+	  This is because,LOCCTR holds the address of the next instruction and not the current instruction. 
+	  LOCCTR is like the program counter.
+	*/
+	int currentInstructionAddress;
 	/*while OPCODE !='END'*/
 	while(strcmp(instructions[lineNumber].OPCODE,"END")!=0){
+		currentInstructionAddress=LOCCTR;
 		/*if there a symbol in the LABEL field*/
 		if(instructions[lineNumber].LABEL!=NULL){
 			/*Search SYMTAB for LABEL. This function returns -1 if the LABEL is found, i.e. if there is an error. Else, it returns the index of the empty field in SYMTAB*/
-			SYMTABindex=searchSYMTAB(lineNumber,instructions[lineNumber].LABEL);
+			int labelFound=searchSYMTAB(instructions[lineNumber].LABEL,SYMTABindex);
 			/*If error flag is set, then display error for duplicate labels*/
-			if(SYMTABindex==-1){
+			if(labelFound){
 				/*lineNumber started from 0. Hence lineNumber+1 is the appropriate lineNumber*/
-				printf("\nERROR: Duplicate symbol '%s' found at line number %d\n",instructions[lineNumber].LABEL,lineNumber+1);	
+				printf("\nERROR: Duplicate symbol '%s' found at line number %d\n",instructions[lineNumber].LABEL,lineNumber+1);
+				exit(1);	
 			}
 			else{
 				/*insert (LABEL,LOCCTR) into SYMTAB*/
 				SYMTAB[SYMTABindex].LABEL=strdup(instructions[lineNumber].LABEL);
-				SYMTAB[SYMTABindex].address=LOCCTR;
+				SYMTAB[SYMTABindex].address=currentInstructionAddress;
+				SYMTABindex++;
 			}
 		}
-		/*
-			CONTINUE FROM HERE..... REMOVE UNNECESSARY LINES BELOW THIS COMMENT
-			ALSO CHECK OUT FOR MEMORY LEAKS
-		*/
 		int found=searchOPTAB(instructions[lineNumber].OPCODE);
-		//continue... also move all the functions to a header file. This file is getting trash
-		
 		if(found){
-			printf("%s is present in the OPTAB\n",instructions[lineNumber].OPCODE);
+			/*add 3 {instruction length} to LOCCTR*/
+			LOCCTR=LOCCTR+3;
+		}else if(strcmp(instructions[lineNumber].OPCODE,"WORD")==0){
+			/*add 3 to LOCCTR*/
+			LOCCTR=LOCCTR+3;
+		}else if(strcmp(instructions[lineNumber].OPCODE,"RESW")==0){
+			/*add 3 * #[OPERAND] to LOCCTR*/
+			LOCCTR=LOCCTR+(3*atoi(instructions[lineNumber].OPERAND));
+		}else if(strcmp(instructions[lineNumber].OPCODE,"RESB")==0){
+			/*add #[OPERAND] to LOCCTR*/
+			LOCCTR=LOCCTR+atoi(instructions[lineNumber].OPERAND);
+		}else if(strcmp(instructions[lineNumber].OPCODE,"BYTE")==0){
+			/*find the length of constant in Bytes, add length to LOCCTR*/
+			LOCCTR=LOCCTR+lengthOfConstantInBytes(instructions[lineNumber].OPERAND);
 		}else{
-			printf("%s is NOT in the OPTAB\n",instructions[lineNumber].OPCODE);
+			printf("\nERROR: Invalid Opcode \"%s\" found at line number %d\n",instructions[lineNumber].OPCODE,lineNumber+1);
+			exit(1);
 		}
+		/*write line to intermediate file*/	
+		writeIntermediateInstructions(lineNumber,currentInstructionAddress,instructions[lineNumber]);
+		/*read next input line*/
 		lineNumber++;
-		
 	}
 	writeSYMTAB();
-	
-}
-
-void clearIntermediateFile(){
-	FILE *f=fopen("intermediate_file.txt","w");
-	fclose(f);
-}
-
-int main(){
-	clearIntermediateFile();
-	assembler_pass1();
-	return 0;
+	printf("Intermediate file is written to intermediate_file.txt\n");
 }
 
 
