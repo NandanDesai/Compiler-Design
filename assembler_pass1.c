@@ -292,6 +292,7 @@ void assembler_pass1(){
 		*/
 		int found=searchOPTAB(instructions[lineNumber].OPCODE);
 		//continue... also move all the functions to a header file. This file is getting trash
+		//this is a test
 		if(found){
 			printf("%s is present in the OPTAB\n",instructions[lineNumber].OPCODE);
 		}else{
