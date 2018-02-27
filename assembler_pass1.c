@@ -291,7 +291,7 @@ void assembler_pass1(){
 			ALSO CHECK OUT FOR MEMORY LEAKS
 		*/
 		int found=searchOPTAB(instructions[lineNumber].OPCODE);
-		//continue...
+		//continue... also move all the functions to a header file. This file is getting trash
 		if(found){
 			printf("%s is present in the OPTAB\n",instructions[lineNumber].OPCODE);
 		}else{
