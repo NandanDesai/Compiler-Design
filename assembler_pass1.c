@@ -187,6 +187,10 @@ void writeSYMTAB(){
 	printf("SYMTAB is written to symtab.txt file.\n");
 }
 
+/*This function reads the Opcodes and their mnemonics from the text file which is given by the user.
+  It then creates a datastructure called OPTAB which is a global variable which can be used anywhere throughout this file.
+  It also initializes noOfOpcodes variable which holds the number of opcodes that are given by the user.
+*/
 void readOPTAB(){
 	printf("\n\n[[ OPTAB ]]\n");
 	printf("-----------------\n");
@@ -220,6 +224,16 @@ void readOPTAB(){
 	}
 }
 
+int searchOPTAB(char* opcode){
+	int i;
+	for(i=0;i<numberOfOpcodes;i++){
+		if(strcmp(OPTAB[i].mnemonic,opcode)==0){
+			return 1;
+		}
+	}
+	return 0;
+}
+
 void assembler_pass1(){
 	/*read the source file and get the instructions*/
 	instruction* instructions=getAllInstructions("source_assembly.txt"); 
@@ -231,7 +245,7 @@ void assembler_pass1(){
 	int lineNumber=0; 
 	/*SYMTABindex will hold the value of index of the empty field where the new (LABEL,LOCCTR)  will be inserted*/
 	int SYMTABindex;
-
+	readOPTAB();
 	/*
 		#PASS 1 algorithm starts from here
 	*/
@@ -276,11 +290,18 @@ void assembler_pass1(){
 			CONTINUE FROM HERE..... REMOVE UNNECESSARY LINES BELOW THIS COMMENT
 			ALSO CHECK OUT FOR MEMORY LEAKS
 		*/
+		int found=searchOPTAB(instructions[lineNumber].OPCODE);
+		//continue...
+		if(found){
+			printf("%s is present in the OPTAB\n",instructions[lineNumber].OPCODE);
+		}else{
+			printf("%s is NOT in the OPTAB\n",instructions[lineNumber].OPCODE);
+		}
 		lineNumber++;
 		
 	}
 	writeSYMTAB();
-	readOPTAB();
+	
 }
 
 void clearIntermediateFile(){
